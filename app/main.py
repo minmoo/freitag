@@ -27,18 +27,19 @@ def get_driver():
     subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
 
     option = Options()
-    option.add_argument('headless')
-    option.add_argument('window-size=1920x1080')
-    option.add_argument("disable-gpu")
+    option.add_argument('--headless')
+    option.add_argument('--window-size=1920x1080')
+    option.add_argument("--disable-gpu")
     option.add_argument(f'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.87 Safari/537.36')
     option.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
 
     chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]
+    s=Service(f'./{chrome_ver}/chromedriver.exe')
     try:
-        driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=option)
+        driver = webdriver.Chrome(options=option, service=s)
     except:
         chromedriver_autoinstaller.install(True)
-        driver = webdriver.Chrome(f'./{chrome_ver}/chromedriver.exe', options=option)
+        driver = webdriver.Chrome(options=option, service=s)
         
     driver.implicitly_wait(3)
     return driver
@@ -51,7 +52,7 @@ def set_chrome_driver():
 
 def get_new_items(driver):
     # prev items
-    with open('items.json', 'r') as fp:
+    with open(f'./items.json', 'r') as fp:
         prev_items = json.load(fp)
     
     curr_data ={}
@@ -67,7 +68,7 @@ def get_new_items(driver):
             
     
     # curr item 저장
-    with open('items.json', 'w') as fp:
+    with open('./items.json', 'w') as fp:
         json.dump(curr_data, fp)
         
     return new_items
