@@ -14,35 +14,35 @@ from selenium.webdriver.chrome.options import Options
 import chromedriver_autoinstaller
 import subprocess
 import shutil
+import pyautogui
+import schedule
+
 
 url = 'https://www.freitag.ch/en/f305'
 chromedriver = "/usr/src/chrome/chromedriver"
 
-def get_driver():
+def set_driver():
     # try:
-    #     shutil.rmtree(r"c:\chrometemp")  #쿠키 / 캐쉬파일 삭제
+    #     shutil.rmtree(r"C:\chrometemp")  # remove Cookie, Cache files
     # except FileNotFoundError:
     #     pass
 
     subprocess.Popen(r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\chrometemp"') # 디버거 크롬 구동
 
     option = Options()
-    option.add_argument('--headless')
-    option.add_argument('--window-size=1920x1080')
-    option.add_argument("--disable-gpu")
-    option.add_argument(f'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.87 Safari/537.36')
     option.add_experimental_option("debuggerAddress", "127.0.0.1:9222")
 
     chrome_ver = chromedriver_autoinstaller.get_chrome_version().split('.')[0]
     s=Service(f'./{chrome_ver}/chromedriver.exe')
+    
+    global driver
     try:
         driver = webdriver.Chrome(options=option, service=s)
     except:
         chromedriver_autoinstaller.install(True)
         driver = webdriver.Chrome(options=option, service=s)
         
-    driver.implicitly_wait(3)
-    return driver
+    driver.implicitly_wait(5)
 
 
 def set_chrome_driver():
@@ -50,45 +50,28 @@ def set_chrome_driver():
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     return driver
 
-def get_new_items(driver):
+def get_new_items():
     # prev items
-    with open(f'./items.json', 'r') as fp:
+    with open(f'items.json', 'r') as fp:
         prev_items = json.load(fp)
-    
-    curr_data ={}
-    curr_data['imgs'] = []
     
     new_items = []
     for item in driver.find_elements(By.CSS_SELECTOR, '#block-freitag-content > article > section:nth-child(2) > div > div > div > div > div:nth-child(2) > div.container.mx-auto > div > div > div > div.flex.flex-wrap > div:nth-child(n) > div > picture > img'):
         image_src = item.get_attribute('src')
-        curr_data['imgs'].append(image_src)
         
         if image_src not in prev_items['imgs']:
             new_items.append(image_src)
+            prev_items['imgs'].append(image_src)
             
     
     # curr item 저장
-    with open('./items.json', 'w') as fp:
-        json.dump(curr_data, fp)
+    with open(f'items.json', 'w') as fp:
+        json.dump(prev_items, fp)
         
     return new_items
-    
 
-def main():
-    # options = webdriver.ChromeOptions()
-    # options.add_argument('headless')    
-    # driver = set_chrome_driver()
-    driver = get_driver()
-    driver.get(url)
-    
-    # cookie button click
-    try:
-        cookie_button = driver.find_element(By.CSS_SELECTOR, 'body > div:nth-child(9) > div > div > div:nth-child(2) > a')
-        cookie_button.click()
-    except NoSuchElementException:
-        pass
-    
-    
+
+def selenium_action():
     show_more_button = driver.find_element(By.CSS_SELECTOR, '#block-freitag-content > article > section:nth-child(2) > div > div > div > div > div:nth-child(2) > div.container.mx-auto > div > div > a')
     show_more_button.click()
     
@@ -98,9 +81,58 @@ def main():
     
     if(len(new_items) != 0 ):
         telegram_bot.sendMessage(new_items)
+    else:
+        print("no data")
+        
     
-    driver.close()
+def pyautogui_action():
+    # click show more button
+    pyautogui.moveTo(1000,1350)
+    pyautogui.click()
+    sleep(3)
+    
+    new_items = get_new_items()
+    
+    if(len(new_items) != 0 ):
+        telegram_bot.sendMessage(new_items)
+    else:
+        print("no data")
+    
+    # refresh
+    pyautogui.moveTo(250,110)
+    pyautogui.click()
+    sleep(5)
+
+
+
+def init():
+    set_driver()
+    driver.get(url)
+    
+      # cookie button click
+    try:
+        cookie_button = driver.find_element(By.CSS_SELECTOR, 'body > div:nth-child(9) > div > div > div:nth-child(2) > a')
+        cookie_button.click()
+    except NoSuchElementException:
+        pass
+    
+
+def main():
+    
+    init()
+    
+    # 1. puautogui 방식
+    schedule.every(5).minutes.do(pyautogui_action) # 5분마다 실행
+
+    # 2. selenium 방식
+    # selenium_action(driver)
+    
+    while True:
+        schedule.run_pending()
+        sleep(1)
+    
 
 if __name__ == '__main__':
     main()
+    
     
