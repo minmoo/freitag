@@ -99,7 +99,7 @@ def pyautogui_action():
         print("no data")
     
     # refresh
-    pyautogui.moveTo(250,110)
+    pyautogui.moveTo(270,120)
     pyautogui.click()
     sleep(5)
 
@@ -118,9 +118,7 @@ def init():
     
 
 def main():
-    
     init()
-    
     # 1. puautogui 방식
     schedule.every(5).minutes.do(pyautogui_action) # 5분마다 실행
 
